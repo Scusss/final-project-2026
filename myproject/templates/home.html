@@ -1,0 +1,538 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#f5f7fb">
+
+    <title>Dashboard | Bank</title>
+
+    <link rel="stylesheet"
+          href="{{ url_for('static', filename='style.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='dashboard.css') }}">
+
+</head>
+
+<body>
+
+    <div class="layout">
+
+        <!-- Sidebar -->
+
+<aside class="sidebar">
+
+    <a href="{{ url_for('pages.home') }}" class="brand">
+        <div class="brand-icon" aria-hidden="true">JAB</div>
+        <div>
+            <div class="brand-name">Bank</div>
+            <div class="brand-subtitle">Online Banking</div>
+        </div>
+    </a>
+
+    <div class="nav-label">MAIN MENU</div>
+
+    <nav class="nav-links" aria-label="Main navigation">
+
+        <a href="{{ url_for('pages.home') }}"
+           class="nav-link active" aria-current="page">
+            <span class="nav-icon" aria-hidden="true">⌂</span>
+            Dashboard
+        </a>
+
+        <a href="{{ url_for('pages.bank_page', operation='deposit') }}"
+           class="nav-link">
+            <span class="nav-icon" aria-hidden="true">↙</span>
+            Deposit
+        </a>
+
+        <a href="{{ url_for('pages.bank_page', operation='withdraw') }}"
+           class="nav-link">
+            <span class="nav-icon" aria-hidden="true">↗</span>
+            Withdraw
+        </a>
+
+        <a href="{{ url_for('pages.bank_page', operation='transfer') }}"
+           class="nav-link">
+            <span class="nav-icon" aria-hidden="true">⇄</span>
+            Transfer
+        </a>
+
+        <a href="{{ url_for('pages.receipts') }}"
+           class="nav-link">
+            <span class="nav-icon" aria-hidden="true">▤</span>
+            Transactions
+        </a>
+
+        <a href="{{ url_for('pages.account_page') }}"
+           class="nav-link">
+            <span class="nav-icon" aria-hidden="true">♙</span>
+            My Account
+        </a>
+
+        {% if role_name|default('customer')|lower == 'admin' %}
+        <div class="nav-label admin-nav-label">ADMINISTRATION</div>
+        <a href="{{ url_for('admin.dashboard') }}" class="nav-link admin-nav-link">
+            <span class="nav-icon" aria-hidden="true">🛡</span>
+            Admin Tools
+        </a>
+        {% endif %}
+
+    </nav>
+
+    <!-- Account rectangle at the bottom -->
+    
+    <div class="sidebar-bottom">
+        <a href="{{ url_for('pages.account_page') }}" class="sidebar-account-card">
+
+            <div class="sidebar-account-icon" aria-hidden="true">
+                {{ session.get('username', 'C')[:1]|upper }}
+            </div>
+
+            <div class="sidebar-account-copy">
+                <strong>{{ session.get('username', 'Customer') }}</strong>
+                <span>Customer account</span>
+            </div>
+
+            <span class="sidebar-account-arrow" aria-hidden="true">›</span>
+
+        </a>
+    </div>
+
+
+</aside>
+
+
+        <!-- Main Dashboard -->
+        <main class="main">
+
+            <!-- Dashboard Header -->
+            <header class="topbar">
+
+                <div>
+                    <div class="breadcrumb">Bank / Dashboard</div>
+
+                    <h1 class="page-title">Dashboard</h1>
+
+                    <p class="page-subtitle">
+                        Management Overview
+                    </p>
+                </div>
+
+                <div class="topbar-identity">
+                    <div class="account-badge {{ 'account-badge--savings' if (account_type|default('Savings')|lower) == 'savings' else 'account-badge--business' if (account_type|default('Savings')|lower) == 'business' else 'account-badge--checking' }}">
+                        {{ account_type|default('Savings') }}
+                    </div><span class="account-status-badge account-status-{{ current_account_status|default('active') }}" aria-label="Account status: {{ current_account_status|default('active')|title }}">{{ current_account_status|default('active')|title }}</span>
+                    <div class="utility-actions" aria-label="More options">
+                        <div class="utility-panel">
+                            <button type="button" class="mini-action-button" data-toggle-panel aria-expanded="false" aria-label="More options">⋯</button>
+                            <div class="action-popover" role="menu" aria-label="More options menu">
+                                <div class="more-options-header"><span>More Options</span><span class="dots" aria-hidden="true">⋮</span></div>
+                                <a href="{{ url_for('pages.notifications') }}" class="action-item" role="menuitem">
+                                    <span class="action-icon" aria-hidden="true">🔔</span>
+                                    <strong>Notifications</strong>
+                                    {% if unread_count > 0 %}
+                                        <span class="notification-count">{{ unread_count }} new</span>
+                                    {% endif %}
+                                </a>
+                                <button type="button" class="action-item" role="menuitem" data-action="security">
+                                    <span class="action-icon" aria-hidden="true">✓</span><span class="action-copy"><strong>Security Settings</strong><span>Password and account security</span></span>
+                                </button>
+                                <button type="button" class="action-item" role="menuitem" data-action="preferences">
+                                    <span class="action-icon" aria-hidden="true">⚙</span><span class="action-copy"><strong>Preferences</strong><span>Customize your banking experience</span></span>
+                                </button>
+                                <button type="button" class="action-item" role="menuitem" data-action="support">
+                                    <span class="action-icon" aria-hidden="true">?</span><span class="action-copy"><strong>Help &amp; Support</strong><span>Get assistance with your account</span></span>
+                                </button>
+                                
+                                <button type="button" class="action-item"
+                                        role="menuitem" data-action="about">
+                                    <span class="action-icon" aria-hidden="true">i</span>
+                                    <span class="action-copy">
+                                        <strong>About JAB Bank</strong>
+                                    </span>
+                                </button>
+
+                                <div class="menu-divider"></div>
+
+                                <form action="{{ url_for('auth.logout') }}"
+                                    method="POST"
+                                    class="more-logout-form">
+                                    <input type="hidden"
+                                        name="csrf_token"
+                                        value="{{ csrf_token() }}">
+
+                                    <button type="submit"
+                                            class="action-item action-item--logout"
+                                            role="menuitem">
+                                        <span class="action-icon" aria-hidden="true">↪</span>
+                                        <span class="action-copy">
+                                            <strong>Log out</strong>
+                                            <span>Securely sign out of your account</span>
+                                        </span>
+                                    </button>
+                                </form>
+
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </header>
+
+            <!-- Welcome and Balance Panel -->
+            <section class="welcome" id="welcomePanel">
+
+                <div class="welcome-content">
+
+                    <h2>
+                        Hello,
+                        <span id="customerName"
+                              data-full-name="{{ first_name|default('Customer', true) }}">
+                            {{ first_name|default('Customer', true) }}
+                        </span>
+                    </h2>
+
+                    <div class="balance-label">
+                        Available Balance
+                    </div>
+
+                    <div class="balance-row">
+
+                        <p class="balance-amount"
+                           id="availableBalance"
+                           data-balance="{{ '%.2f'|format(balance|default(0, true)|float) }}">
+                            ₱ {{ '{:,.2f}'.format(balance|default(0, true)|float) }}
+                        </p>
+
+                        <button type="button"
+                                class="privacy-button"
+                                id="privacyToggle"
+                                aria-label="Hide name and balance"
+                                aria-pressed="false"
+                                title="Hide or show name and balance">
+
+                            <span id="privacyIcon" aria-hidden="true">◉</span>
+
+                        </button>
+
+                    </div>
+
+                </div>
+
+                <div class="welcome-badge {% if role_name|default('customer')|lower == 'admin' %}admin-welcome-badge{% endif %}">
+                    {% if role_name|default('customer')|lower == 'admin' %}
+                        🛡 &nbsp; Admin + Customer Banking
+                    {% else %}
+                        🛡 &nbsp; Standard Banking
+                    {% endif %}
+                </div>
+
+            </section>
+
+            <!-- Quick Actions -->
+            <section class="quick-actions"
+                     aria-labelledby="actions-title">
+
+                <div class="section-heading">
+
+                    <div>
+                        <h2 id="actions-title">Quick Actions</h2>
+
+                        <p>What would you like to do today?</p>
+                    </div>
+
+                    <span class="section-tag">YOUR SERVICES</span>
+
+                </div>
+
+                <div class="action-grid">
+
+                    <a href="{{ url_for('pages.bank_page', operation='deposit') }}"
+                       class="action-card">
+
+                        <div class="action-icon icon-green"
+                             aria-hidden="true">↙</div>
+
+                        <div class="action-info">
+                            <h3>Deposit Money</h3>
+                            <p>Add money to your account and manage your funds.</p>
+                        </div>
+
+                        <span class="action-arrow" aria-hidden="true">›</span>
+
+                    </a>
+
+                    <a href="{{ url_for('pages.bank_page', operation='withdraw') }}"
+                       class="action-card">
+
+                        <div class="action-icon icon-orange"
+                             aria-hidden="true">↗</div>
+
+                        <div class="action-info">
+                            <h3>Withdraw Money</h3>
+                            <p>Withdraw funds from your available balance.</p>
+                        </div>
+
+                        <span class="action-arrow" aria-hidden="true">›</span>
+
+                    </a>
+
+                    <a href="{{ url_for('pages.bank_page', operation='transfer') }}"
+                       class="action-card">
+
+                        <div class="action-icon icon-blue"
+                             aria-hidden="true">⇄</div>
+
+                        <div class="action-info">
+                            <h3>Transfer Money</h3>
+                            <p>Move money between supported accounts.</p>
+                        </div>
+
+                        <span class="action-arrow" aria-hidden="true">›</span>
+
+                    </a>
+
+                    <a href="{{ url_for('pages.receipts') }}"
+                       class="action-card">
+
+                        <div class="action-icon icon-purple"
+                             aria-hidden="true">▤</div>
+
+                        <div class="action-info">
+                            <h3>Transaction History</h3>
+                            <p>View your transactions and receipts.</p>
+                        </div>
+
+                        <span class="action-arrow" aria-hidden="true">›</span>
+
+                    </a>
+
+                    <a href="{{ url_for('pages.account_page') }}"
+                       class="action-card">
+
+                        <div class="action-icon icon-blue"
+                             aria-hidden="true">♙</div>
+
+                        <div class="action-info">
+                            <h3>Account Details</h3>
+                            <p>Review your customer and account information.</p>
+                        </div>
+
+                        <span class="action-arrow" aria-hidden="true">›</span>
+
+                    </a>
+
+                </div>
+
+            </section>
+
+            {% if role_name|default('customer')|lower == 'admin' %}
+            <section class="quick-actions admin-tools-section" aria-labelledby="admin-tools-title">
+                <div class="section-heading">
+                    <div><h2 id="admin-tools-title">Admin Tools</h2><p>Administrative access alongside your personal banking services.</p></div>
+                    <span class="section-tag">AUTHORIZED ACCESS</span>
+                </div>
+                <div class="action-grid">
+                    <a href="{{ url_for('admin.users') }}" class="action-card"><div class="action-icon icon-blue" aria-hidden="true">♙</div><div class="action-info"><h3>Manage Users</h3><p>Review customer profiles and assign existing roles.</p></div><span class="action-arrow" aria-hidden="true">›</span></a>
+                    <a href="{{ url_for('admin.transactions') }}" class="action-card"><div class="action-icon icon-purple" aria-hidden="true">▤</div><div class="action-info"><h3>All Transactions</h3><p>Review recent bank-wide transaction records.</p></div><span class="action-arrow" aria-hidden="true">›</span></a>
+                    <a href="{{ url_for('admin.audit_logs') }}" class="action-card"><div class="action-icon icon-orange" aria-hidden="true">✓</div><div class="action-info"><h3>Audit Logs</h3><p>Review logged administrative changes.</p></div><span class="action-arrow" aria-hidden="true">›</span></a>
+                    <a href="{{ url_for('admin.login_history') }}" class="action-card"><div class="action-icon icon-green" aria-hidden="true">◷</div><div class="action-info"><h3>Login History</h3><p>Review recent login attempts and status.</p></div><span class="action-arrow" aria-hidden="true">›</span></a>
+                </div>
+            </section>
+            {% endif %}
+
+            <!-- Footer -->
+
+
+        </main>
+
+    </div>
+
+    <!-- Privacy Toggle -->
+    <script>
+        const nameElement = document.getElementById("customerName");
+        const balanceElement = document.getElementById("availableBalance");
+        const toggleButton = document.getElementById("privacyToggle");
+        const toggleIcon = document.getElementById("privacyIcon");
+
+        let isHidden = false;
+
+        function getInitials(name) {
+            return name
+                .trim()
+                .split(/\s+/)
+                .filter(Boolean)
+                .map(part => part.charAt(0).toUpperCase())
+                .join("");
+        }
+
+        toggleButton.addEventListener("click", function () {
+            isHidden = !isHidden;
+
+            if (isHidden) {
+                nameElement.textContent = getInitials(
+                    nameElement.dataset.fullName
+                );
+
+                balanceElement.textContent = "₱ ****";
+                toggleIcon.textContent = "◎";
+
+                toggleButton.setAttribute("aria-pressed", "true");
+                toggleButton.setAttribute(
+                    "aria-label",
+                    "Show name and balance"
+                );
+            } else {
+                nameElement.textContent =
+                    nameElement.dataset.fullName;
+
+                const balance = Number(
+                    balanceElement.dataset.balance
+                );
+
+                balanceElement.textContent =
+                    "₱ " + balance.toLocaleString("en-PH", {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2
+                    });
+
+                toggleIcon.textContent = "◉";
+
+                toggleButton.setAttribute("aria-pressed", "false");
+                toggleButton.setAttribute(
+                    "aria-label",
+                    "Hide name and balance"
+                );
+            }
+        });
+    </script>
+
+
+    <style>
+        .more-modal-backdrop{position:fixed;inset:0;z-index:9999;display:none;align-items:center;justify-content:center;padding:20px;background:rgba(15,23,42,.48)}
+        .more-modal-backdrop.is-visible{display:flex}
+        .more-modal{width:min(100%,460px);max-height:85vh;overflow:auto;padding:24px;border-radius:16px;background:#fff;color:#172033;box-shadow:0 20px 60px rgba(0,0,0,.22)}
+        .more-modal h2{margin:0 0 12px;font-size:1.25rem}
+        .more-modal p{margin:10px 0;line-height:1.55}
+        .more-modal .modal-close{margin-top:14px;border:0;border-radius:9px;padding:10px 16px;background:#173f70;color:#fff;cursor:pointer}
+        @media(max-width:700px){.action-popover{min-width:min(360px,calc(100vw - 34px))}.topbar-identity{gap:6px}.account-badge{display:none}}
+    </style>
+    <div class="more-modal-backdrop" id="moreOptionsModal" aria-hidden="true">
+        <section class="more-modal" role="dialog" aria-modal="true" aria-labelledby="moreOptionsModalTitle">
+            <h2 id="moreOptionsModalTitle">More Options</h2>
+            <div id="moreOptionsModalContent"></div>
+            <button type="button" class="modal-close" id="moreOptionsModalClose">Close</button>
+        </section>
+    </div>
+    <script>
+    document.addEventListener("DOMContentLoaded", function () {
+        const nameElement = document.getElementById("customerName");
+        const balanceElement = document.getElementById("availableBalance");
+        const toggleButton = document.getElementById("privacyToggle");
+        const toggleIcon = document.getElementById("privacyIcon");
+
+        if (nameElement && balanceElement && toggleButton && toggleIcon) {
+            let isHidden = false;
+            function getInitials(name) {
+                return (name || "Customer").trim().split(/\s+/).filter(Boolean)
+                    .map(part => part.charAt(0).toUpperCase()).join("");
+            }
+            toggleButton.addEventListener("click", function () {
+                isHidden = !isHidden;
+                if (isHidden) {
+                    nameElement.textContent = getInitials(nameElement.dataset.fullName);
+                    balanceElement.textContent = "₱ ****";
+                    toggleIcon.textContent = "◎";
+                    toggleButton.setAttribute("aria-pressed", "true");
+                    toggleButton.setAttribute("aria-label", "Show name and balance");
+                } else {
+                    nameElement.textContent = nameElement.dataset.fullName || "Customer";
+                    const balance = Number(balanceElement.dataset.balance || 0);
+                    balanceElement.textContent = "₱ " + balance.toLocaleString("en-PH", {
+                        minimumFractionDigits: 2, maximumFractionDigits: 2
+                    });
+                    toggleIcon.textContent = "◉";
+                    toggleButton.setAttribute("aria-pressed", "false");
+                    toggleButton.setAttribute("aria-label", "Hide name and balance");
+                }
+            });
+        }
+
+        const panels = document.querySelectorAll(".utility-panel");
+        function closePanels() {
+            panels.forEach(panel => {
+                panel.classList.remove("is-open");
+                const trigger = panel.querySelector("[data-toggle-panel]");
+                if (trigger) trigger.setAttribute("aria-expanded", "false");
+            });
+        }
+        panels.forEach(panel => {
+            const trigger = panel.querySelector("[data-toggle-panel]");
+            if (!trigger) return;
+            trigger.addEventListener("click", function (event) {
+                event.stopPropagation();
+                const wasOpen = panel.classList.contains("is-open");
+                closePanels();
+                if (!wasOpen) {
+                    panel.classList.add("is-open");
+                    trigger.setAttribute("aria-expanded", "true");
+                }
+            });
+        });
+        document.addEventListener("click", event => {
+            if (!event.target.closest(".utility-panel")) closePanels();
+        });
+
+        const modal = document.getElementById("moreOptionsModal");
+        const modalTitle = document.getElementById("moreOptionsModalTitle");
+        const modalContent = document.getElementById("moreOptionsModalContent");
+        const closeButton = document.getElementById("moreOptionsModalClose");
+        function openModal(title, message) {
+            if (!modal || !modalTitle || !modalContent) return;
+            modalTitle.textContent = title;
+            modalContent.replaceChildren();
+            const p = document.createElement("p");
+            p.textContent = message;
+            modalContent.appendChild(p);
+            modal.classList.add("is-visible");
+            modal.setAttribute("aria-hidden", "false");
+            if (closeButton) closeButton.focus();
+        }
+        function closeModal() {
+            if (!modal) return;
+            modal.classList.remove("is-visible");
+            modal.setAttribute("aria-hidden", "true");
+        }
+        if (closeButton) closeButton.addEventListener("click", closeModal);
+        if (modal) modal.addEventListener("click", event => {
+            if (event.target === modal) closeModal();
+        });
+        document.addEventListener("keydown", event => {
+            if (event.key === "Escape") closeModal();
+        });
+
+        const menu = document.querySelector(".action-popover");
+        if (menu) menu.addEventListener("click", function (event) {
+            const button = event.target.closest("[data-action]");
+            if (!button) return;
+            switch (button.dataset.action) {
+                case "security":
+                    window.location.href = "{{ url_for('pages.account_page') }}";
+                    break;
+                case "preferences":
+                    openModal("Preferences", "Preferences are not saved yet; this is a display preview only.");
+                    break;
+                case "support":
+                    openModal("Help & Support", "Contact your bank administrator for help. Never share your password, PIN, or one-time verification code.");
+                    break;
+                case "about":
+                    openModal("About JAB Bank", "About Our Bank Our bank is a modern digital banking platform designed to provide users with a convenient, secure, and reliable way to manage their finances. It offers essential banking services such as deposits, withdrawals, fund transfers, transaction monitoring, and account management through a user-friendly interface. The platform aims to make banking simpler, more accessible, and efficient while prioritizing security and customer convenience. **Developed by Coria, Arquiza, and Banay**, this banking system represents our commitment to applying technology and innovation to create a practical and accessible digital banking experience.");
+                    break;
+            }
+        });
+    });
+    </script>
+
+</body>
+</html>
